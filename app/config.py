@@ -19,6 +19,7 @@ class AppConfig:
     HOST: str
     PORT: int
     DEBUG: bool
+    FORWARDED_ALLOW_IPS: str
 
 
 @dataclass
@@ -60,11 +61,11 @@ class DatabaseConfig:
     HOST: str
     PORT: int
 
-    def url(self, driver: str = "mysql+aiomysql") -> str:
+    def url(self, driver: str = "postgresql+asyncpg") -> str:
         """
         Generates a database connection URL using the provided driver, username, password, host, port, and database.
 
-        :param driver: The driver to use for the connection. Defaults to "mysql+aiomysql".
+        :param driver: The driver to use for the connection. Defaults to "postgresql+asyncpg".
         :return: The generated connection URL.
         """
         return f"{driver}://{self.USERNAME}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{self.DATABASE}"
@@ -95,6 +96,7 @@ def load_config() -> Config:
             HOST=env.str("APP_HOST"),
             PORT=env.int("APP_PORT"),
             DEBUG=env.bool("APP_DEBUG"),
+            FORWARDED_ALLOW_IPS=env.str("FORWARDED_ALLOW_IPS"),
         ),
         admin=AdminConfig(
             BASE_URL=env.str("ADMIN_BASE_URL"),
@@ -111,7 +113,7 @@ def load_config() -> Config:
         redis=RedisConfig(
             HOST=env.str("REDIS_HOST"),
             PORT=env.int("REDIS_PORT"),
-            DB=env.int("REDIS_DB"),
+            DB=env.str("REDIS_DB"),
         ),
         database=DatabaseConfig(
             HOST=env.str("DB_HOST"),

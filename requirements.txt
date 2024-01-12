@@ -1,6 +1,6 @@
 aiogram==3.1.1
 aiohttp==3.8.5
-aiomysql==0.2.0
+asyncpg
 Babel==2.13.0
 cachetools==5.3.1
 cryptography==41.0.4

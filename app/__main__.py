@@ -113,11 +113,11 @@ admin.mount_to(app)
 # Add admin views
 admin_views_add(admin)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # noqa
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # noqa
         handlers=[
             TimedRotatingFileHandler(
                 filename=f"logs/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log",
@@ -126,10 +126,16 @@ if __name__ == '__main__':
                 backupCount=1,
             ),
             logging.StreamHandler(),
-        ]
+        ],
     )
     # Set logging level for aiogram to CRITICAL
     aiogram_logger = logging.getLogger("aiogram.event")
     aiogram_logger.setLevel(logging.CRITICAL)
     # Run app with uvicorn
-    uvicorn.run(app, host=config.app.HOST, port=config.app.PORT)
+    uvicorn.run(
+        app,
+        host=config.app.HOST,
+        port=config.app.PORT,
+        proxy_headers=True,
+        forwarded_allow_ips=config.app.FORWARDED_ALLOW_IPS,
+    )
