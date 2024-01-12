@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
+from contextlib import asynccontextmanager
 
 import uvicorn
 from aiogram.enums import ParseMode
@@ -29,7 +30,7 @@ config = load_config()
 webhook_path = config.webhook.PATH + config.bot.TOKEN
 webhook_url = config.webhook.DOMAIN + webhook_path
 
-app = FastAPI(debug=config.app.DEBUG)
+
 db = Database(config=config.database)
 bot = Bot(
     token=config.bot.TOKEN,
@@ -39,6 +40,38 @@ dp = Dispatcher(
     storage=RedisStorage.from_url(config.redis.dsn()),
     config=config,
 )
+
+
+async def on_startup():
+    """
+    Startup event handler. This runs when the app starts.
+    """
+    await db.init()
+    await commands.setup(bot)
+    await bot.send_message(chat_id=config.bot.DEV_ID, text="#BotStarted")
+    await bot.set_webhook(url=webhook_url, allowed_updates=dp.resolve_used_update_types())
+
+
+async def on_shutdown():
+    """
+    Shutdown event handler. This runs when the app shuts down.
+    """
+    await db.close()
+    await commands.delete(bot)
+    await bot.send_message(chat_id=config.bot.DEV_ID, text="#BotStopped")
+    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.session.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await on_startup()
+    yield
+    await on_shutdown()
+
+
+app = FastAPI(debug=config.app.DEBUG, lifespan=lifespan)
+
 admin = Admin(
     engine=db.engine,
     debug=config.app.DEBUG,
@@ -67,29 +100,6 @@ async def bot_webhook(update: dict) -> Response:
     await dp.feed_update(bot=bot, update=Update(**update))
 
     return Response()
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    """
-    Startup event handler. This runs when the app starts.
-    """
-    await db.init()
-    await commands.setup(bot)
-    await bot.send_message(chat_id=config.bot.DEV_ID, text="#BotStarted")
-    await bot.set_webhook(url=webhook_url, allowed_updates=dp.resolve_used_update_types())
-
-
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
-    """
-    Shutdown event handler. This runs when the app shuts down.
-    """
-    await db.close()
-    await commands.delete(bot)
-    await bot.send_message(chat_id=config.bot.DEV_ID, text="#BotStopped")
-    await bot.delete_webhook(drop_pending_updates=True)
-    await bot.session.close()
 
 
 # Mount static files directory
